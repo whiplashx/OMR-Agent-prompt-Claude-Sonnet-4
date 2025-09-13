@@ -1,1 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
 .venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OMR-specific
+models/
+*.pt
+*.pth
+*.onnx
+output/
+temp/
+cache/
+logs/
+*.log
+
+# Data files
+data/raw/
+data/processed/
+datasets/
+*.h5
+*.hdf5
+
+# Generated files
+*.mxl
+*.musicxml
+*.midi
+*.mid
+
+# Images (except examples)
+*.png
+*.jpg
+*.jpeg
+*.tiff
+*.bmp
+!examples/*.png
+
+# System files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
