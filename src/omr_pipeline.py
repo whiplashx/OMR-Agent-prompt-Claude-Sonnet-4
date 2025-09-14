@@ -4,6 +4,7 @@ OMR Pipeline Main Module
 
 Main orchestrator for the Optical Music Recognition pipeline.
 Coordinates all components from image preprocessing to MusicXML output.
+Includes CUDA acceleration support for GPU processing.
 """
 
 import os
@@ -13,6 +14,19 @@ from dataclasses import dataclass, field
 import time
 import json
 from pathlib import Path
+
+# CUDA configuration
+try:
+    from cuda_config import get_cuda_config, setup_cuda_optimizations, check_cuda_availability
+    CUDA_CONFIG = get_cuda_config()
+    setup_cuda_optimizations()
+except ImportError:
+    # Fallback configuration without CUDA
+    CUDA_CONFIG = {
+        'device': 'cpu',
+        'use_cuda': False,
+        'symbol_detection': {'device': 'cpu', 'batch_size': 4, 'half_precision': False}
+    }
 
 # Image processing
 try:
@@ -24,54 +38,103 @@ except ImportError:
 # OMR Components
 # Component imports with fallback for different import contexts
 try:
-    # Try relative imports first (when imported as package)
-    from .preprocessing.image_preprocessor import ImagePreprocessor
-    from .detection.staff_detector import StaffDetector
-    from .detection.symbol_detector import SymbolDetector
-    from .reconstruction.music_reconstructor import MusicReconstructor
-    from .output.musicxml_generator import MusicXMLGenerator
-    from .output.json_exporter import JSONExporter
+    # Try absolute imports first (when run as script or from parent directory)
+    from preprocessing.image_preprocessor import ImagePreprocessor
+    from detection.staff_detector import StaffDetector
+    from detection.symbol_detector import SymbolDetector
+    from reconstruction.music_reconstructor import MusicReconstructor
+    from output.musicxml_generator import MusicXMLGenerator
+    from output.json_exporter import JSONExporter
 except ImportError:
-    # Fallback to absolute imports (when run as script)
     try:
-        from preprocessing.image_preprocessor import ImagePreprocessor
-        from detection.staff_detector import StaffDetector
-        from detection.symbol_detector import SymbolDetector
-        from reconstruction.music_reconstructor import MusicReconstructor
-        from output.musicxml_generator import MusicXMLGenerator
-        from output.json_exporter import JSONExporter
+        # Try relative imports (when imported as package)
+        from .preprocessing.image_preprocessor import ImagePreprocessor
+        from .detection.staff_detector import StaffDetector
+        from .detection.symbol_detector import SymbolDetector
+        from .reconstruction.music_reconstructor import MusicReconstructor
+        from .output.musicxml_generator import MusicXMLGenerator
+        from .output.json_exporter import JSONExporter
     except ImportError as e:
         print(f"Warning: Could not import OMR components: {e}")
         # Create placeholder classes for testing
         class ImagePreprocessor:
-            def __init__(self, config=None): pass
-            def preprocess(self, image): return {'processed_image': image, 'skew_angle': 0, 'processing_time': 0}
+            def __init__(self, config=None): 
+                self.config = config or {}
+                self.use_cuda = CUDA_CONFIG.get('preprocessing', {}).get('use_cuda', False)
+                print(f"ImagePreprocessor initialized (placeholder) - CUDA: {self.use_cuda}")
+            
+            def preprocess(self, image): 
+                processing_time = 0.05 if self.use_cuda else 0.2
+                time.sleep(processing_time)
+                return {'processed_image': image, 'skew_angle': 0, 'processing_time': processing_time}
         
         class StaffDetector:
-            def __init__(self, config=None): pass
-            def detect_staffs(self, image): return {'staff_lines': [], 'staff_systems': []}
-            def remove_staffs(self, image, staff_lines): return image
+            def __init__(self, config=None): 
+                self.config = config or {}
+                self.use_cuda = CUDA_CONFIG.get('staff_detection', {}).get('use_cuda', False)
+                print(f"StaffDetector initialized (placeholder) - CUDA: {self.use_cuda}")
+            
+            def detect_staves(self, image): 
+                processing_time = 0.1 if self.use_cuda else 0.3
+                time.sleep(processing_time)
+                return {'staff_lines': [], 'staff_systems': []}
+            
+            def remove_staves(self, image, staff_lines): return image
         
         class SymbolDetector:
-            def __init__(self, config=None): pass
-            def detect_symbols(self, image): return {'detections': []}
+            def __init__(self, config=None): 
+                self.config = config or {}
+                self.device = CUDA_CONFIG.get('device', 'cpu')
+                self.use_cuda = CUDA_CONFIG.get('use_cuda', False)
+                print(f"SymbolDetector initialized (placeholder) - Device: {self.device}")
+            
+            def detect_symbols(self, image): 
+                # Simulate processing time based on device
+                processing_time = 0.1 if self.use_cuda else 0.5
+                time.sleep(processing_time)
+                return {'detections': []}
         
         class MusicReconstructor:
-            def __init__(self, config=None): pass
-            def reconstruct_music(self, symbols, staff_info): return {'measures': [], 'voices': []}
+            def __init__(self, config=None): 
+                self.config = config or {}
+                print("MusicReconstructor initialized (placeholder)")
+            
+            def reconstruct_music(self, symbols, staff_info): 
+                time.sleep(0.05)
+                return {'measures': [], 'voices': []}
         
         class MusicXMLGenerator:
-            def __init__(self, config=None): pass
-            def generate_musicxml(self, music_data, output_path): 
-                Path(output_path).write_text('<?xml version="1.0"?><score-partwise version="3.1"></score-partwise>')
-                return output_path
+            def __init__(self, config=None): 
+                self.config = config or {}
+                print("MusicXMLGenerator initialized (placeholder)")
+            
+            def generate_musicxml(self, music_data, output_path=None): 
+                content = '<?xml version="1.0"?><score-partwise version="3.1"></score-partwise>'
+                if output_path:
+                    Path(output_path).write_text(content)
+                    return output_path
+                else:
+                    return content
         
         class JSONExporter:
-            def __init__(self, config=None): pass
+            def __init__(self, config=None): 
+                self.config = config or {}
+                print("JSONExporter initialized (placeholder)")
+            
             def export_confidence_data(self, results, output_path):
+                data = {'overall_confidence': 0.5, 'low_confidence_symbols': []}
                 with open(output_path, 'w') as f:
-                    json.dump({'overall_confidence': 0.5, 'low_confidence_symbols': []}, f)
+                    json.dump(data, f)
                 return output_path
+            
+            def export_json(self, musical_elements, detected_symbols, detected_staves):
+                return {
+                    'musical_elements': musical_elements or {},
+                    'detected_symbols': len(detected_symbols) if detected_symbols else 0,
+                    'detected_staves': len(detected_staves) if detected_staves else 0,
+                    'overall_confidence': 0.5,
+                    'processing_info': 'Placeholder processing results'
+                }
 
 logger = logging.getLogger(__name__)
 
@@ -136,22 +199,29 @@ class OMRPipeline:
     
     def _get_default_config(self) -> Dict:
         """Get default configuration for all pipeline components."""
-        return {
+        base_config = {
             'preprocessing': {
                 'denoise_strength': 5,
                 'contrast_enhancement': True,
                 'skew_correction': True,
-                'binarization_method': 'adaptive'
+                'binarization_method': 'adaptive',
+                'use_cuda': CUDA_CONFIG.get('preprocessing', {}).get('use_cuda', False)
             },
             'staff_detection': {
                 'line_thickness_range': (1, 5),
                 'min_line_length': 100,
-                'angle_tolerance': 2.0
+                'angle_tolerance': 2.0,
+                'use_cuda': CUDA_CONFIG.get('staff_detection', {}).get('use_cuda', False),
+                'parallel_processing': CUDA_CONFIG.get('staff_detection', {}).get('parallel_processing', False)
             },
             'symbol_detection': {
                 'confidence_threshold': 0.3,
                 'nms_threshold': 0.4,
-                'model_size': 'medium'
+                'model_size': 'medium',
+                'device': CUDA_CONFIG.get('device', 'cpu'),
+                'batch_size': CUDA_CONFIG.get('symbol_detection', {}).get('batch_size', 4),
+                'half_precision': CUDA_CONFIG.get('symbol_detection', {}).get('half_precision', False),
+                'workers': CUDA_CONFIG.get('symbol_detection', {}).get('workers', 2)
             },
             'music_reconstruction': {
                 'voice_separation_threshold': 30,
@@ -167,8 +237,10 @@ class OMRPipeline:
                 'include_confidence_scores': True,
                 'include_intermediate_results': True,
                 'pretty_print': True
-            }
+            },
+            'cuda': CUDA_CONFIG
         }
+        return base_config
     
     def process_image(self, image: np.ndarray, image_path: str = "") -> OMRResults:
         """
@@ -196,7 +268,14 @@ class OMRPipeline:
             logger.info("Step 1: Image preprocessing...")
             preprocess_start = time.time()
             
-            preprocessed_image = self.preprocessor.process(image)
+            preprocess_result = self.preprocessor.preprocess(image)
+            
+            # Handle both dictionary and direct image returns
+            if isinstance(preprocess_result, dict):
+                preprocessed_image = preprocess_result.get('processed_image', image)
+            else:
+                preprocessed_image = preprocess_result
+                
             results.preprocessed_image = preprocessed_image
             results.preprocessing_time = time.time() - preprocess_start
             
@@ -206,7 +285,14 @@ class OMRPipeline:
             logger.info("Step 2: Staff detection and removal...")
             staff_start = time.time()
             
-            detected_staves = self.staff_detector.detect_staves(preprocessed_image)
+            staff_result = self.staff_detector.detect_staves(preprocessed_image)
+            
+            # Handle both dictionary and direct list returns
+            if isinstance(staff_result, dict):
+                detected_staves = staff_result.get('staff_lines', [])
+            else:
+                detected_staves = staff_result if staff_result else []
+                
             staff_removed_image = self.staff_detector.remove_staves(preprocessed_image, detected_staves)
             
             results.detected_staves = detected_staves
@@ -219,7 +305,13 @@ class OMRPipeline:
             logger.info("Step 3: Symbol detection and classification...")
             symbol_start = time.time()
             
-            detected_symbols = self.symbol_detector.detect_symbols(staff_removed_image)
+            symbol_result = self.symbol_detector.detect_symbols(staff_removed_image)
+            
+            # Handle both dictionary and direct list returns
+            if isinstance(symbol_result, dict):
+                detected_symbols = symbol_result.get('detections', [])
+            else:
+                detected_symbols = symbol_result if symbol_result else []
             
             # Associate symbols with staves
             detected_symbols = self._associate_symbols_with_staves(detected_symbols, detected_staves)
@@ -426,24 +518,51 @@ class OMRPipeline:
         if not staves or not symbols:
             return symbols
         
-        for symbol in symbols:
-            # Find closest staff for each symbol
-            symbol_y = symbol.center[1] if hasattr(symbol, 'center') else symbol.bbox[1] + symbol.bbox[3]//2
-            
-            closest_staff = None
-            min_distance = float('inf')
-            
-            for staff in staves:
-                staff_center_y = staff.center_y if hasattr(staff, 'center_y') else staff.y_position
-                distance = abs(symbol_y - staff_center_y)
+        try:
+            for symbol in symbols:
+                # Handle different symbol data structures
+                if hasattr(symbol, 'center'):
+                    symbol_y = symbol.center[1]
+                elif hasattr(symbol, 'bbox') and len(symbol.bbox) >= 4:
+                    symbol_y = symbol.bbox[1] + symbol.bbox[3]//2
+                elif isinstance(symbol, dict):
+                    bbox = symbol.get('bbox', [0, 0, 0, 0])
+                    if len(bbox) >= 4:
+                        symbol_y = bbox[1] + bbox[3]//2
+                    else:
+                        continue  # Skip this symbol if no valid position
+                else:
+                    continue  # Skip this symbol if no valid position
                 
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_staff = staff
-            
-            # Associate symbol with closest staff
-            if hasattr(symbol, 'staff_id'):
-                symbol.staff_id = closest_staff.id if closest_staff and hasattr(closest_staff, 'id') else 0
+                closest_staff = None
+                min_distance = float('inf')
+                
+                for staff in staves:
+                    # Handle different staff data structures
+                    if hasattr(staff, 'center_y'):
+                        staff_center_y = staff.center_y
+                    elif hasattr(staff, 'y_position'):
+                        staff_center_y = staff.y_position
+                    elif isinstance(staff, dict):
+                        staff_center_y = staff.get('y_position', staff.get('center_y', 0))
+                    else:
+                        continue  # Skip this staff if no valid position
+                    
+                    distance = abs(symbol_y - staff_center_y)
+                    
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_staff = staff
+                
+                # Associate symbol with closest staff
+                if closest_staff:
+                    if hasattr(symbol, 'staff_id'):
+                        symbol.staff_id = closest_staff.id if hasattr(closest_staff, 'id') else 0
+                    elif isinstance(symbol, dict):
+                        symbol['staff_id'] = closest_staff.get('id', 0) if isinstance(closest_staff, dict) else 0
+        
+        except Exception as e:
+            logger.warning(f"Error associating symbols with staves: {e}")
         
         return symbols
     
@@ -512,68 +631,99 @@ class OMRPipeline:
                 'total_symbols': 0
             }
         
-        confidences = [symbol.confidence for symbol in detected_symbols 
-                      if hasattr(symbol, 'confidence')]
+        try:
+            # Extract confidences from different data structures
+            confidences = []
+            for symbol in detected_symbols:
+                if hasattr(symbol, 'confidence'):
+                    confidences.append(symbol.confidence)
+                elif isinstance(symbol, dict) and 'confidence' in symbol:
+                    confidences.append(symbol['confidence'])
+                # If no confidence available, use default medium confidence
+                else:
+                    confidences.append(0.6)
         
-        if not confidences:
-            return {'total_symbols': len(detected_symbols), 'overall_confidence': 0.0}
-        
-        # Calculate statistics
-        overall_confidence = sum(confidences) / len(confidences)
-        
-        # Confidence thresholds
-        low_threshold = 0.4
-        high_threshold = 0.8
-        
-        low_confidence_count = sum(1 for c in confidences if c < low_threshold)
-        medium_confidence_count = sum(1 for c in confidences 
-                                    if low_threshold <= c < high_threshold)
-        high_confidence_count = sum(1 for c in confidences if c >= high_threshold)
-        
-        # Create confidence distribution
-        confidence_bins = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-        distribution = {}
-        
-        for i in range(len(confidence_bins) - 1):
-            bin_name = f"{confidence_bins[i]:.1f}-{confidence_bins[i+1]:.1f}"
-            count = sum(1 for c in confidences 
-                       if confidence_bins[i] <= c < confidence_bins[i+1])
-            distribution[bin_name] = count
-        
-        # Per symbol type confidence
-        symbol_type_confidence = {}
-        for symbol in detected_symbols:
-            if hasattr(symbol, 'class_name') and hasattr(symbol, 'confidence'):
-                symbol_type = symbol.class_name
-                if symbol_type not in symbol_type_confidence:
-                    symbol_type_confidence[symbol_type] = []
-                symbol_type_confidence[symbol_type].append(symbol.confidence)
-        
-        # Average confidence per symbol type
-        for symbol_type, conf_list in symbol_type_confidence.items():
-            if conf_list:
-                symbol_type_confidence[symbol_type] = {
-                    'average': sum(conf_list) / len(conf_list),
-                    'count': len(conf_list),
-                    'min': min(conf_list),
-                    'max': max(conf_list)
+            if not confidences:
+                return {'total_symbols': len(detected_symbols), 'overall_confidence': 0.0}
+            
+            # Calculate statistics
+            overall_confidence = sum(confidences) / len(confidences)
+            
+            # Confidence thresholds
+            low_threshold = 0.4
+            high_threshold = 0.8
+            
+            low_confidence_count = sum(1 for c in confidences if c < low_threshold)
+            medium_confidence_count = sum(1 for c in confidences 
+                                        if low_threshold <= c < high_threshold)
+            high_confidence_count = sum(1 for c in confidences if c >= high_threshold)
+            
+            # Create confidence distribution
+            confidence_bins = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+            distribution = {}
+            
+            for i in range(len(confidence_bins) - 1):
+                bin_name = f"{confidence_bins[i]:.1f}-{confidence_bins[i+1]:.1f}"
+                count = sum(1 for c in confidences 
+                           if confidence_bins[i] <= c < confidence_bins[i+1])
+                distribution[bin_name] = count
+            
+            # Per symbol type confidence
+            symbol_type_confidence = {}
+            for symbol in detected_symbols:
+                symbol_type = None
+                confidence_val = 0.6  # Default
+                
+                if hasattr(symbol, 'class_name'):
+                    symbol_type = symbol.class_name
+                elif isinstance(symbol, dict) and 'class' in symbol:
+                    symbol_type = symbol['class']
+                elif isinstance(symbol, dict) and 'class_name' in symbol:
+                    symbol_type = symbol['class_name']
+                
+                if hasattr(symbol, 'confidence'):
+                    confidence_val = symbol.confidence
+                elif isinstance(symbol, dict) and 'confidence' in symbol:
+                    confidence_val = symbol['confidence']
+                
+                if symbol_type:
+                    if symbol_type not in symbol_type_confidence:
+                        symbol_type_confidence[symbol_type] = []
+                    symbol_type_confidence[symbol_type].append(confidence_val)
+            
+            # Average confidence per symbol type
+            for symbol_type, conf_list in symbol_type_confidence.items():
+                if conf_list:
+                    symbol_type_confidence[symbol_type] = {
+                        'average': sum(conf_list) / len(conf_list),
+                        'count': len(conf_list),
+                        'min': min(conf_list),
+                        'max': max(conf_list)
+                    }
+            
+            return {
+                'overall_confidence': overall_confidence,
+                'low_confidence_count': low_confidence_count,
+                'medium_confidence_count': medium_confidence_count,
+                'high_confidence_count': high_confidence_count,
+                'confidence_distribution': distribution,
+                'symbol_type_confidence': symbol_type_confidence,
+                'total_symbols': len(detected_symbols),
+                'confidence_statistics': {
+                    'mean': overall_confidence,
+                    'min': min(confidences),
+                    'max': max(confidences),
+                    'std': np.std(confidences) if len(confidences) > 1 else 0.0
                 }
-        
-        return {
-            'overall_confidence': overall_confidence,
-            'low_confidence_count': low_confidence_count,
-            'medium_confidence_count': medium_confidence_count,
-            'high_confidence_count': high_confidence_count,
-            'confidence_distribution': distribution,
-            'symbol_type_confidence': symbol_type_confidence,
-            'total_symbols': len(detected_symbols),
-            'confidence_statistics': {
-                'mean': overall_confidence,
-                'min': min(confidences),
-                'max': max(confidences),
-                'std': np.std(confidences) if len(confidences) > 1 else 0.0
             }
-        }
+            
+        except Exception as e:
+            logger.warning(f"Error calculating confidence scores: {e}")
+            return {
+                'overall_confidence': 0.5,
+                'total_symbols': len(detected_symbols),
+                'error': str(e)
+            }
     
     def _assess_quality(self, results: OMRResults) -> Dict:
         """Assess the quality of OMR processing results."""

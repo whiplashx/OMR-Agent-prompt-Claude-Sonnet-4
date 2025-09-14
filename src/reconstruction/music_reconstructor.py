@@ -23,76 +23,81 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MusicalElement:
     """Base class for all musical elements."""
-    element_type: str
-    confidence: float
-    x_position: float
-    y_position: float
-    staff_index: int
+    element_type: str = ""
+    confidence: float = 0.0
+    x_position: float = 0.0
+    y_position: float = 0.0
+    staff_index: int = 0
     measure_index: Optional[int] = None
 
 
 @dataclass
 class Note(MusicalElement):
     """Represents a musical note."""
-    pitch: str
-    duration: float  # In quarter note units
+    pitch: str = ""
+    duration: float = 1.0  # In quarter note units
+    voice: int = 1
     is_rest: bool = False
     dotted: bool = False
     accidental: Optional[str] = None
-    voice: int = 1
     tied_to_next: bool = False
     tied_from_prev: bool = False
     stem_direction: Optional[str] = None  # 'up' or 'down'
     beam_group: Optional[int] = None
     
     def __post_init__(self):
+        super().__post_init__() if hasattr(super(), '__post_init__') else None
         self.element_type = 'note'
 
 
 @dataclass
 class Chord(MusicalElement):
     """Represents a chord (multiple notes played simultaneously)."""
-    notes: List[Note]
-    duration: float
+    notes: List[Note] = field(default_factory=list)
+    duration: float = 1.0
     voice: int = 1
     
     def __post_init__(self):
+        super().__post_init__() if hasattr(super(), '__post_init__') else None
         self.element_type = 'chord'
 
 
 @dataclass
 class TimeSignature(MusicalElement):
     """Represents a time signature."""
-    numerator: int
-    denominator: int
+    numerator: int = 4
+    denominator: int = 4
     
     def __post_init__(self):
+        super().__post_init__() if hasattr(super(), '__post_init__') else None
         self.element_type = 'time_signature'
 
 
 @dataclass
 class KeySignature(MusicalElement):
     """Represents a key signature."""
-    sharps: int  # Positive for sharps, negative for flats
-    key: str     # e.g., "C major", "A minor"
+    sharps: int = 0  # Positive for sharps, negative for flats
+    key: str = "C major"     # e.g., "C major", "A minor"
     
     def __post_init__(self):
+        super().__post_init__() if hasattr(super(), '__post_init__') else None
         self.element_type = 'key_signature'
 
 
 @dataclass
 class Clef(MusicalElement):
     """Represents a clef."""
-    clef_type: str  # 'treble', 'bass', 'alto', 'tenor'
+    clef_type: str = "treble"  # 'treble', 'bass', 'alto', 'tenor'
     
     def __post_init__(self):
+        super().__post_init__() if hasattr(super(), '__post_init__') else None
         self.element_type = 'clef'
 
 
 @dataclass
 class Measure:
     """Represents a musical measure."""
-    index: int
+    index: int = 0
     elements: List[MusicalElement] = field(default_factory=list)
     time_signature: Optional[TimeSignature] = None
     key_signature: Optional[KeySignature] = None
@@ -104,7 +109,7 @@ class Measure:
 @dataclass
 class Voice:
     """Represents a voice within a staff."""
-    voice_number: int
+    voice_number: int = 1
     elements: List[MusicalElement] = field(default_factory=list)
     staff_index: int = 0
 
